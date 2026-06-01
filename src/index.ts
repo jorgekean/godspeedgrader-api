@@ -9,6 +9,7 @@ import fastifyJwt from '@fastify/jwt';
 
 // Import routes
 import { authRoutes } from './routes/auth.routes.js';
+import { syncRoutes } from './routes/sync.routes.js';
 
 dotenv.config();
 
@@ -88,7 +89,7 @@ fastify.register(async function protectedRoutes(childServer) {
     childServer.addHook('onRequest', childServer.authenticate);
 
     // Add protected route groups here
-    // Example: childServer.register(exampleRoutes, { prefix: '/examples' });
+    childServer.register(syncRoutes, { prefix: '/sync' });
 }, { prefix: '/api' });
 
 // 6. Start the Server

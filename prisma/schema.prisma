@@ -18,5 +18,103 @@ model User {
   role      String   @default("user") // user, school, admin
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Relations
+  sections      Section[]
+  students      Student[]
+  exams         Exam[]
+  scanResults   ScanResult[]
+
   @@map("users")
+}
+
+// Grade Sections (Classes/Groups)
+model Section {
+  id            String   @id // Client-generated UUID
+  gradeLevel    String   // e.g., "Grade 9"
+  sectionName   String   // e.g., "Rizal"
+  createdBy     String   // User ID who created
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  students      Student[]
+  scanResults   ScanResult[]
+
+  @@unique([gradeLevel, sectionName, createdBy])
+  @@map("sections")
+}
+
+// Students
+model Student {
+  id            String   @id // Client-generated UUID
+  sectionId     String
+  fullName      String
+  studentNo     String?
+  createdBy     String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  scanResults   ScanResult[]
+
+  @@index([sectionId])
+  @@index([createdBy])
+  @@map("students")
+}
+
+// Exams (Question templates)
+model Exam {
+  id            String   @id // Client-generated UUID
+  gradeLevel    String   // e.g., "Grade 9"
+  subject       String   // e.g., "Science"
+  title         String   // e.g., "Midterm Exam"
+  itemCount     Int      // Number of questions
+  answerKey     String   // JSON string of correct answers
+  createdBy     String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  scanResults   ScanResult[]
+
+  @@index([gradeLevel])
+  @@index([subject])
+  @@index([createdBy])
+  @@map("exams")
+}
+
+// Scan Results (Student grades)
+model ScanResult {
+  id            String   @id // Client-generated UUID
+  examId        String
+  studentId     String
+  sectionId     String
+  score         Int
+  total         Int
+  answers       String   // JSON string of student answers
+  createdBy     String
+  scannedAt     DateTime @default(now()) @map("scanned_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([createdBy])
+  @@map("scan_results")
 }
