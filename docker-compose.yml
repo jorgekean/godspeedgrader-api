@@ -1,0 +1,17 @@
+# docker-compose.yml
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: godspeedgrader-db
+    restart: always
+    environment:
+      POSTGRES_USER: jorge_admin
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: godspeedgrader_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
