@@ -2,14 +2,41 @@ import { prisma } from '../lib/prisma.js';
 import type { SyncBatchInput } from '../schemas/sync.schema.js';
 
 export class SyncService {
-  async syncBatch(userId: string, data: SyncBatchInput) {
+  async syncBatch(userEmail: string, data: SyncBatchInput) {
     return await prisma.$transaction(async (tx) => {
       const results = {
+        periods: 0,
         sections: 0,
         students: 0,
         exams: 0,
         scanResults: 0,
       };
+
+      // 0. Sync Periods (NEW)
+      if (data.periods && data.periods.length > 0) {
+        await Promise.all(data.periods.map(period => {
+          return tx.period.upsert({
+            where: { id: period.id },
+            update: {
+              name: period.name,
+              startDate: period.startDate,
+              endDate: period.endDate,
+              updatedAt: new Date(),
+              deletedAt: period.isDeleted ? new Date() : null,
+            },
+            create: {
+              id: period.id,
+              name: period.name,
+              startDate: period.startDate,
+              endDate: period.endDate,
+              createdBy: userEmail,
+              createdAt: period.createdAt || new Date(),
+              deletedAt: period.isDeleted ? new Date() : null,
+            },
+          });
+        }));
+        results.periods = data.periods.length;
+      }
 
       // 1. Sync Sections
       if (data.sections && data.sections.length > 0) {
@@ -26,7 +53,7 @@ export class SyncService {
               id: section.id,
               gradeLevel: section.gradeLevel,
               sectionName: section.sectionName,
-              createdBy: userId,
+              createdBy: userEmail,
               createdAt: section.createdAt || new Date(),
               deletedAt: section.isDeleted ? new Date() : null,
             },
@@ -52,7 +79,7 @@ export class SyncService {
               sectionId: student.sectionId,
               fullName: student.fullName,
               studentNo: student.studentNo ?? null,
-              createdBy: userId,
+              createdBy: userEmail,
               createdAt: student.createdAt || new Date(),
               deletedAt: student.isDeleted ? new Date() : null,
             },
@@ -67,6 +94,7 @@ export class SyncService {
           return tx.exam.upsert({
             where: { id: exam.id },
             update: {
+              periodId: exam.periodId ?? null,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
@@ -77,12 +105,13 @@ export class SyncService {
             },
             create: {
               id: exam.id,
+              periodId: exam.periodId ?? null,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
               itemCount: exam.itemCount,
               answerKey: exam.answerKey,
-              createdBy: userId,
+              createdBy: userEmail,
               createdAt: exam.createdAt || new Date(),
               deletedAt: exam.isDeleted ? new Date() : null,
             },
@@ -100,6 +129,7 @@ export class SyncService {
               examId: result.examId,
               studentId: result.studentId,
               sectionId: result.sectionId,
+              periodId: result.periodId ?? null,
               score: result.score,
               total: result.total,
               answers: result.answers,
@@ -112,11 +142,12 @@ export class SyncService {
               examId: result.examId,
               studentId: result.studentId,
               sectionId: result.sectionId,
+              periodId: result.periodId ?? null,
               score: result.score,
               total: result.total,
               answers: result.answers,
               scannedAt: result.scannedAt,
-              createdBy: userId,
+              createdBy: userEmail,
               createdAt: result.createdAt || new Date(),
               deletedAt: result.isDeleted ? new Date() : null,
             },
@@ -129,13 +160,15 @@ export class SyncService {
     });
   }
 
-  async getSyncData(userId: string, since?: Date) {
+  async getSyncData(userEmail: string, since?: Date) {
     const whereClause = {
-      createdBy: userId,
+      createdBy: userEmail,
+      deletedAt: null,
       ...(since ? { updatedAt: { gte: since } } : {}),
     };
 
-    const [sections, students, exams, scanResults] = await Promise.all([
+    const [periods, sections, students, exams, scanResults] = await Promise.all([
+      prisma.period.findMany({ where: whereClause }),
       prisma.section.findMany({ where: whereClause }),
       prisma.student.findMany({ where: whereClause }),
       prisma.exam.findMany({ where: whereClause }),
@@ -143,6 +176,7 @@ export class SyncService {
     ]);
 
     return {
+      periods,
       sections,
       students,
       exams,
@@ -150,4 +184,5 @@ export class SyncService {
     };
   }
 }
+
 

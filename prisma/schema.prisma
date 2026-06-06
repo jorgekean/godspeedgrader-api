@@ -23,8 +23,28 @@ model User {
   students      Student[]
   exams         Exam[]
   scanResults   ScanResult[]
+  periods       Period[]
 
   @@map("users")
+}
+
+// The Grading Period (NEW)
+model Period {
+  id            String   @id // Client-generated UUID
+  name          String   // e.g., "1st Quarter", "2nd Quarter"
+  startDate     DateTime @map("start_date")
+  endDate       DateTime @map("end_date")
+  createdBy     String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  exams         Exam[]
+  scanResults   ScanResult[]
+
+  @@map("periods")
 }
 
 // Grade Sections (Classes/Groups)
@@ -32,13 +52,13 @@ model Section {
   id            String   @id // Client-generated UUID
   gradeLevel    String   // e.g., "Grade 9"
   sectionName   String   // e.g., "Rizal"
-  createdBy     String   // User ID who created
+  createdBy     String   // User email who created
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
   // Relations
-  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
   students      Student[]
   scanResults   ScanResult[]
 
@@ -59,7 +79,7 @@ model Student {
 
   // Relations
   section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
   scanResults   ScanResult[]
 
   @@index([sectionId])
@@ -70,6 +90,7 @@ model Student {
 // Exams (Question templates)
 model Exam {
   id            String   @id // Client-generated UUID
+  periodId      String?  // NEW: Link to grading period
   gradeLevel    String   // e.g., "Grade 9"
   subject       String   // e.g., "Science"
   title         String   // e.g., "Midterm Exam"
@@ -81,12 +102,14 @@ model Exam {
   deletedAt     DateTime? @map("deleted_at")
 
   // Relations
-  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  period        Period?  @relation(fields: [periodId], references: [id], onDelete: SetNull)
   scanResults   ScanResult[]
 
   @@index([gradeLevel])
   @@index([subject])
   @@index([createdBy])
+  @@index([periodId])
   @@map("exams")
 }
 
@@ -96,6 +119,7 @@ model ScanResult {
   examId        String
   studentId     String
   sectionId     String
+  periodId      String?  // NEW: For redundancy/quick filtering
   score         Int
   total         Int
   answers       String   // JSON string of student answers
@@ -109,12 +133,14 @@ model ScanResult {
   exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  period        Period?  @relation(fields: [periodId], references: [id], onDelete: SetNull)
 
   @@unique([examId, studentId])
   @@index([examId])
   @@index([studentId])
   @@index([sectionId])
   @@index([createdBy])
+  @@index([periodId])
   @@map("scan_results")
 }

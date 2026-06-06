@@ -2,12 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { type ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { SyncService } from '../services/sync.service.js';
-import { 
-  syncBatchSchema, 
-  sectionSchema, 
-  studentSchema, 
-  examSchema, 
-  scanResultSchema 
+import {
+  syncBatchSchema,
+  periodSchema,
+  sectionSchema,
+  studentSchema,
+  examSchema,
+  scanResultSchema
 } from '../schemas/sync.schema.js';
 
 export async function syncRoutes(fastify: FastifyInstance) {
@@ -26,6 +27,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
           success: z.boolean(),
           message: z.string(),
           results: z.object({
+            periods: z.number().int(),
             sections: z.number().int(),
             students: z.number().int(),
             exams: z.number().int(),
@@ -40,11 +42,11 @@ export async function syncRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
-    const userId = (request.user as any).id;
+    const userEmail = (request.user as any).email;
     const data = request.body;
 
     try {
-      const results = await syncService.syncBatch(userId, data);
+      const results = await syncService.syncBatch(userEmail, data);
       return {
         success: true,
         message: 'Sync completed successfully',
@@ -73,21 +75,25 @@ export async function syncRoutes(fastify: FastifyInstance) {
         200: z.object({
           success: z.boolean(),
           data: z.object({
-            sections: z.array(sectionSchema.extend({ 
-              createdBy: z.string(), 
-              updatedAt: z.date() 
+            periods: z.array(periodSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
             })),
-            students: z.array(studentSchema.extend({ 
-              createdBy: z.string(), 
-              updatedAt: z.date() 
+            sections: z.array(sectionSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
             })),
-            exams: z.array(examSchema.extend({ 
-              createdBy: z.string(), 
-              updatedAt: z.date() 
+            students: z.array(studentSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
             })),
-            scanResults: z.array(scanResultSchema.extend({ 
-              createdBy: z.string(), 
-              updatedAt: z.date() 
+            exams: z.array(examSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
+            })),
+            scanResults: z.array(scanResultSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
             })),
           })
         }),
@@ -103,16 +109,16 @@ export async function syncRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
-    const userId = (request.user as any).id;
+    const userEmail = (request.user as any).email;
     const { since } = request.query as { since?: string };
-    
+
     // Parse 'since' into a Date object if provided
     let sinceDate: Date | undefined;
     if (since) {
       // Handle both numeric strings (ms) and ISO strings
       const numericSince = Number(since);
       sinceDate = !isNaN(numericSince) ? new Date(numericSince) : new Date(since);
-      
+
       if (isNaN(sinceDate.getTime())) {
         return reply.status(400).send({
           success: false,
@@ -122,7 +128,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const data = await syncService.getSyncData(userId, sinceDate);
+      const data = await syncService.getSyncData(userEmail, sinceDate);
       return {
         success: true,
         data
