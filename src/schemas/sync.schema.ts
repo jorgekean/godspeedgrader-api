@@ -42,7 +42,7 @@ export const examSchema = z.object({
   category: z.string().optional().nullable(),
   maxScore: z.number().int().optional().nullable(),
   itemCount: z.number().int().positive(),
-  answerKey: z.string().min(1), // Expecting JSON string
+  answerKey: z.string().min(1),
   createdAt: z.coerce.date().optional(),
   isDeleted: z.boolean().optional(), // Add this for hard-delete requests
 });

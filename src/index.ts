@@ -3,8 +3,8 @@ import Fastify, { type FastifyReply, type FastifyRequest, type FastifyError } fr
 import cors from '@fastify/cors';
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import * as dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyJwt from '@fastify/jwt';
@@ -131,6 +131,18 @@ fastify.register(fastifySwaggerUi, {
 // --- PUBLIC ROUTES ---
 fastify.get('/health', async () => {
     return { status: 'GodspeedGrader API Active', timestamp: new Date() };
+});
+
+// Endpoint to view logs
+fastify.get('/api/logs', async (request, reply) => {
+    const logPath = path.join(process.cwd(), 'logs', 'app.log');
+    
+    if (!fs.existsSync(logPath)) {
+        return reply.status(404).send({ success: false, message: 'Log file not found' });
+    }
+
+    const stream = fs.createReadStream(logPath);
+    return reply.type('text/plain').send(stream);
 });
 
 fastify.register(authRoutes, { prefix: '/api/auth' });
