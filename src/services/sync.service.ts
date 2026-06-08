@@ -98,6 +98,8 @@ export class SyncService {
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
+              category: exam.category ?? null,
+              maxScore: exam.maxScore ?? null,
               itemCount: exam.itemCount,
               answerKey: exam.answerKey,
               updatedAt: new Date(),
@@ -109,6 +111,8 @@ export class SyncService {
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
+              category: exam.category ?? null,
+              maxScore: exam.maxScore ?? null,
               itemCount: exam.itemCount,
               answerKey: exam.answerKey,
               createdBy: userEmail,
@@ -123,6 +127,7 @@ export class SyncService {
       // 4. Sync Scan Results
       if (data.scanResults && data.scanResults.length > 0) {
         await Promise.all(data.scanResults.map(result => {
+          const stringifiedAnswers = JSON.stringify(result.answers);
           return tx.scanResult.upsert({
             where: { id: result.id },
             update: {
@@ -132,7 +137,7 @@ export class SyncService {
               periodId: result.periodId ?? null,
               score: result.score,
               total: result.total,
-              answers: result.answers,
+              answers: stringifiedAnswers,
               scannedAt: result.scannedAt,
               updatedAt: new Date(),
               deletedAt: result.isDeleted ? new Date() : null, // Soft delete
@@ -145,7 +150,7 @@ export class SyncService {
               periodId: result.periodId ?? null,
               score: result.score,
               total: result.total,
-              answers: result.answers,
+              answers: stringifiedAnswers,
               scannedAt: result.scannedAt,
               createdBy: userEmail,
               createdAt: result.createdAt || new Date(),
@@ -167,13 +172,19 @@ export class SyncService {
       ...(since ? { updatedAt: { gte: since } } : {}),
     };
 
-    const [periods, sections, students, exams, scanResults] = await Promise.all([
+    const [periods, sections, students, exams, rawScanResults] = await Promise.all([
       prisma.period.findMany({ where: whereClause }),
       prisma.section.findMany({ where: whereClause }),
       prisma.student.findMany({ where: whereClause }),
       prisma.exam.findMany({ where: whereClause }),
       prisma.scanResult.findMany({ where: whereClause }),
     ]);
+
+    // Parse JSON answers for the client
+    const scanResults = rawScanResults.map(sr => ({
+      ...sr,
+      answers: JSON.parse(sr.answers)
+    }));
 
     return {
       periods,

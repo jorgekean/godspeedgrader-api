@@ -1,8 +1,10 @@
 // src/index.ts
-import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyReply, type FastifyRequest, type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import * as dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyJwt from '@fastify/jwt';
@@ -11,7 +13,13 @@ import fastifyJwt from '@fastify/jwt';
 import { authRoutes } from './routes/auth.routes.js';
 import { syncRoutes } from './routes/sync.routes.js';
 
-dotenv.config();
+// Match Vite behavior: Load .env.development if it exists, otherwise fall back to .env
+const devEnvPath = path.resolve(process.cwd(), '.env.development');
+if (fs.existsSync(devEnvPath)) {
+    dotenv.config({ path: devEnvPath, override: true });
+} else {
+    dotenv.config({ override: true });
+}
 
 // 1. Tell TypeScript about our custom decorator
 declare module 'fastify' {
@@ -20,7 +28,25 @@ declare module 'fastify' {
     }
 }
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+    logger: {
+        level: 'info',
+        transport: {
+            targets: [
+                {
+                    target: 'pino/file',
+                    options: { destination: './logs/app.log', mkdir: true },
+                    level: 'info'
+                },
+                {
+                    target: 'pino-pretty',
+                    options: { colorize: true },
+                    level: 'info'
+                }
+            ]
+        }
+    }
+});
 
 // 2. Setup Zod Compilers for Fastify
 fastify.setValidatorCompiler(validatorCompiler);
@@ -45,6 +71,32 @@ fastify.decorate('authenticate', async function (request: FastifyRequest, reply:
     } catch (err) {
         return reply.status(401).send({ message: "Unauthorized: Invalid or missing token." });
     }
+});
+
+// --- GLOBAL ERROR HANDLER ---
+fastify.setErrorHandler((error: FastifyError, request, reply) => {
+    // Log the error
+    request.log.error(error);
+
+    // If it's a validation error (Zod), Fastify handles it with a 400 status by default, 
+    // but we can customize it here if needed.
+    if (error.validation) {
+        return reply.status(400).send({
+            success: false,
+            message: 'Validation failed',
+            errors: error.validation
+        });
+    }
+
+    // Default error response
+    const statusCode = error.statusCode || 500;
+    const isClientError = statusCode >= 400 && statusCode < 500;
+
+    return reply.status(statusCode).send({
+        success: false,
+        message: isClientError ? error.message : 'Internal Server Error',
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
 });
 
 // 5. Swagger Documentation Setup

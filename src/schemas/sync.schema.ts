@@ -39,6 +39,8 @@ export const examSchema = z.object({
   gradeLevel: z.string().min(1),
   subject: z.string().min(1),
   title: z.string().min(1),
+  category: z.string().optional().nullable(),
+  maxScore: z.number().int().optional().nullable(),
   itemCount: z.number().int().positive(),
   answerKey: z.string().min(1), // Expecting JSON string
   createdAt: z.coerce.date().optional(),
@@ -54,7 +56,7 @@ export const scanResultSchema = z.object({
   periodId: IdSchema.optional().nullable(),
   score: z.number().int().min(0),
   total: z.number().int().positive(),
-  answers: z.string().min(1), // Expecting JSON string
+  answers: z.record(z.string()), // Accept the object from frontend
   scannedAt: z.coerce.date(),
   createdAt: z.coerce.date().optional(),
   isDeleted: z.boolean().optional(), // Add this for hard-delete requests

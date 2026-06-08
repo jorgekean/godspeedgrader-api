@@ -45,21 +45,12 @@ export async function syncRoutes(fastify: FastifyInstance) {
     const userEmail = (request.user as any).email;
     const data = request.body;
 
-    try {
-      const results = await syncService.syncBatch(userEmail, data);
-      return {
-        success: true,
-        message: 'Sync completed successfully',
-        results
-      };
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        message: 'Sync failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    const results = await syncService.syncBatch(userEmail, data);
+    return {
+      success: true,
+      message: 'Sync completed successfully',
+      results
+    };
   });
 
   // 2. GET /sync - Pull data for the user (Supports incremental sync)
@@ -100,11 +91,6 @@ export async function syncRoutes(fastify: FastifyInstance) {
         400: z.object({
           success: z.boolean(),
           message: z.string()
-        }),
-        500: z.object({
-          success: z.boolean(),
-          message: z.string(),
-          error: z.string()
         })
       }
     }
@@ -127,19 +113,10 @@ export async function syncRoutes(fastify: FastifyInstance) {
       }
     }
 
-    try {
-      const data = await syncService.getSyncData(userEmail, sinceDate);
-      return {
-        success: true,
-        data
-      };
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        message: 'Failed to fetch sync data',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    const data = await syncService.getSyncData(userEmail, sinceDate);
+    return {
+      success: true,
+      data
+    };
   });
 }

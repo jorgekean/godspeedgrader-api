@@ -8,12 +8,8 @@ export async function authRoutes(fastify: FastifyInstance) {
 
     // POST /api/auth/register
     server.post('/register', { schema: { body: registerSchema } }, async (request, reply) => {
-        try {
-            const user = await AuthService.registerUser(request.body);
-            return reply.code(201).send({ success: true, data: user });
-        } catch (error: any) {
-            return reply.code(400).send({ success: false, message: error.message });
-        }
+        const user = await AuthService.registerUser(request.body);
+        return reply.code(201).send({ success: true, data: user });
     });
 
     // POST /api/auth/login

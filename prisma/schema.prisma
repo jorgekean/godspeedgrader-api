@@ -94,6 +94,8 @@ model Exam {
   gradeLevel    String   // e.g., "Grade 9"
   subject       String   // e.g., "Science"
   title         String   // e.g., "Midterm Exam"
+  category      String?  // NEW: WW, PT, or QA
+  maxScore      Int?     // NEW: Optional override for itemCount
   itemCount     Int      // Number of questions
   answerKey     String   // JSON string of correct answers
   createdBy     String
