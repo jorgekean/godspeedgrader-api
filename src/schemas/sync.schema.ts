@@ -56,7 +56,7 @@ export const scanResultSchema = z.object({
   periodId: IdSchema.optional().nullable(),
   score: z.number().int().min(0),
   total: z.number().int().positive(),
-  answers: z.record(z.string()), // Accept the object from frontend
+  answers: z.record(z.string(), z.string()), // Accept the object from frontend (Key: QuestionID, Value: Answer)
   scannedAt: z.coerce.date(),
   createdAt: z.coerce.date().optional(),
   isDeleted: z.boolean().optional(), // Add this for hard-delete requests
