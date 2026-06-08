@@ -12,6 +12,7 @@ import fastifyJwt from '@fastify/jwt';
 // Import routes
 import { authRoutes } from './routes/auth.routes.js';
 import { syncRoutes } from './routes/sync.routes.js';
+import { prisma } from './lib/prisma.js';
 
 // Match Vite behavior: Load .env.development if it exists, otherwise fall back to .env
 const devEnvPath = path.resolve(process.cwd(), '.env.development');
@@ -143,6 +144,17 @@ fastify.get('/api/logs', async (request, reply) => {
 
     const stream = fs.createReadStream(logPath);
     return reply.type('text/plain').send(stream);
+});
+
+// Endpoint to list users (Public)
+fastify.get('/api/users', async (request, reply) => {
+    const users = await prisma.user.findMany({
+        select: {
+            email: true,
+            role: true
+        }
+    });
+    return { success: true, data: users };
 });
 
 fastify.register(authRoutes, { prefix: '/api/auth' });
