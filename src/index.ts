@@ -55,7 +55,9 @@ fastify.setSerializerCompiler(serializerCompiler);
 
 // 3. Register Plugins
 fastify.register(cors, {
-    origin: ['http://localhost:5173', 'https://localhost:5173', 'http://localhost:3000', 'https://localhost:3000', "https://godspeedgrader.com", "https://www.godspeedgrader.com"],
+    origin: ['http://localhost:5173', 'https://localhost:5173',
+        'http://172.20.10.12:5173', 'https://172.20.10.12:5173',
+        'http://localhost:3001', 'https://localhost:3001', "https://godspeedgrader.com", "https://www.godspeedgrader.com"],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -137,7 +139,7 @@ fastify.get('/health', async () => {
 // Endpoint to view logs
 fastify.get('/api/logs', async (request, reply) => {
     const logPath = path.join(process.cwd(), 'logs', 'app.log');
-    
+
     if (!fs.existsSync(logPath)) {
         return reply.status(404).send({ success: false, message: 'Log file not found' });
     }
