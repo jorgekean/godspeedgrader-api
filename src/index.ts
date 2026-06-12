@@ -154,7 +154,8 @@ fastify.get('/api/users', async (request, reply) => {
     const users = await prisma.user.findMany({
         select: {
             email: true,
-            role: true
+            role: true,
+            createdAt: true,
         }
     });
     return { success: true, data: users };
