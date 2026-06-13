@@ -116,7 +116,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
     const data = await syncService.getSyncData(userEmail, sinceDate);
     return {
       success: true,
-      data
+      data: data as any
     };
   });
 }

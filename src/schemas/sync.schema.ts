@@ -43,6 +43,7 @@ export const examSchema = z.object({
   maxScore: z.number().int().optional().nullable(),
   itemCount: z.number().int().positive(),
   answerKey: z.string().min(1),
+  competencyMap: z.record(z.string(), z.string()).optional().nullable(),
   createdAt: z.coerce.date().optional(),
   isDeleted: z.boolean().optional(), // Add this for hard-delete requests
 });

@@ -98,6 +98,7 @@ model Exam {
   maxScore      Int?     // NEW: Optional override for itemCount
   itemCount     Int      // Number of questions
   answerKey     String   // JSON string of correct answers
+  competencyMap Json?    @map("competency_map") // NEW: itemNumber -> Competency Name
   createdBy     String
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")

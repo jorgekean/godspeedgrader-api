@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import type { SyncBatchInput } from '../schemas/sync.schema.js';
 
@@ -102,6 +103,7 @@ export class SyncService {
               maxScore: exam.maxScore ?? null,
               itemCount: exam.itemCount,
               answerKey: exam.answerKey,
+              competencyMap: (exam.competencyMap as any) ?? null,
               updatedAt: new Date(),
               deletedAt: exam.isDeleted ? new Date() : null, // Soft delete
             },
@@ -115,6 +117,7 @@ export class SyncService {
               maxScore: exam.maxScore ?? null,
               itemCount: exam.itemCount,
               answerKey: exam.answerKey,
+              competencyMap: (exam.competencyMap as any) ?? null,
               createdBy: userEmail,
               createdAt: exam.createdAt || new Date(),
               deletedAt: exam.isDeleted ? new Date() : null,
