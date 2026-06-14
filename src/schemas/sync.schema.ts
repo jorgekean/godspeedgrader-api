@@ -58,6 +58,7 @@ export const examSchema = z.object({
   gradeLevel: z.string().min(1),
   subject: z.string().min(1),
   title: z.string().min(1),
+  examCode: z.string().max(8).optional().nullable(),
   category: z.string().optional().nullable(),
   maxScore: z.number().int().optional().nullable(),
   itemCount: z.number().int().positive(),

@@ -134,6 +134,7 @@ model Exam {
   gradeLevel    String   // e.g., "Grade 9" (Legacy/Display)
   subject       String   // e.g., "Science"
   title         String   // e.g., "Midterm Exam"
+  examCode      String?  @db.VarChar(8) @map("exam_code")
   category      String?  // NEW: WW, PT, or QA
   maxScore      Int?     // NEW: Optional override for itemCount
   itemCount     Int      // Number of questions
