@@ -24,8 +24,43 @@ model User {
   exams         Exam[]
   scanResults   ScanResult[]
   periods       Period[]
+  gradeLevels   GradeLevel[]
+  subjects      Subject[]
 
   @@map("users")
+}
+
+// Grade Levels Registry (NEW)
+model GradeLevel {
+  id            String   @id // Client-generated UUID
+  title         String   // e.g., "Grade 9"
+  createdBy     String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  sections      Section[]
+  exams         Exam[]
+
+  @@map("grade_levels")
+}
+
+// Subjects Registry (NEW)
+model Subject {
+  id            String   @id // Client-generated UUID
+  title         String   // e.g., "Mathematics"
+  createdBy     String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  exams         Exam[]
+
+  @@map("subjects")
 }
 
 // The Grading Period (NEW)
@@ -50,7 +85,8 @@ model Period {
 // Grade Sections (Classes/Groups)
 model Section {
   id            String   @id // Client-generated UUID
-  gradeLevel    String   // e.g., "Grade 9"
+  gradeLevelId  String?  @map("grade_level_id") // NEW: Link to GradeLevel
+  gradeLevel    String   // e.g., "Grade 9" (Legacy/Display)
   sectionName   String   // e.g., "Rizal"
   createdBy     String   // User email who created
   createdAt     DateTime @default(now()) @map("created_at")
@@ -58,11 +94,13 @@ model Section {
   deletedAt     DateTime? @map("deleted_at")
 
   // Relations
-  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  user          User        @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  gradeLevelRef GradeLevel? @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
   students      Student[]
   scanResults   ScanResult[]
 
   @@unique([gradeLevel, sectionName, createdBy])
+  @@index([gradeLevelId])
   @@map("sections")
 }
 
@@ -91,7 +129,9 @@ model Student {
 model Exam {
   id            String   @id // Client-generated UUID
   periodId      String?  // NEW: Link to grading period
-  gradeLevel    String   // e.g., "Grade 9"
+  gradeLevelId  String?  @map("grade_level_id") // NEW: Link to GradeLevel
+  subjectId     String?  @map("subject_id")     // NEW: Link to Subject
+  gradeLevel    String   // e.g., "Grade 9" (Legacy/Display)
   subject       String   // e.g., "Science"
   title         String   // e.g., "Midterm Exam"
   category      String?  // NEW: WW, PT, or QA
@@ -105,14 +145,18 @@ model Exam {
   deletedAt     DateTime? @map("deleted_at")
 
   // Relations
-  user          User     @relation(fields: [createdBy], references: [email], onDelete: Cascade)
-  period        Period?  @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  user          User        @relation(fields: [createdBy], references: [email], onDelete: Cascade)
+  period        Period?     @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  gradeLevelRef GradeLevel? @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
+  subjectRef    Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   scanResults   ScanResult[]
 
   @@index([gradeLevel])
   @@index([subject])
   @@index([createdBy])
   @@index([periodId])
+  @@index([gradeLevelId])
+  @@index([subjectId])
   @@map("exams")
 }
 

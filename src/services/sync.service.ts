@@ -7,13 +7,15 @@ export class SyncService {
     return await prisma.$transaction(async (tx) => {
       const results = {
         periods: 0,
+        gradeLevels: 0,
+        subjects: 0,
         sections: 0,
         students: 0,
         exams: 0,
         scanResults: 0,
       };
 
-      // 0. Sync Periods (NEW)
+      // 0. Sync Periods
       if (data.periods && data.periods.length > 0) {
         await Promise.all(data.periods.map(period => {
           return tx.period.upsert({
@@ -39,12 +41,57 @@ export class SyncService {
         results.periods = data.periods.length;
       }
 
+      // 0.1 Sync Grade Levels (NEW)
+      if (data.gradeLevels && data.gradeLevels.length > 0) {
+        await Promise.all(data.gradeLevels.map(gl => {
+          return tx.gradeLevel.upsert({
+            where: { id: gl.id },
+            update: {
+              title: gl.title,
+              updatedAt: new Date(),
+              deletedAt: gl.isDeleted ? new Date() : null,
+            },
+            create: {
+              id: gl.id,
+              title: gl.title,
+              createdBy: userEmail,
+              createdAt: gl.createdAt || new Date(),
+              deletedAt: gl.isDeleted ? new Date() : null,
+            },
+          });
+        }));
+        results.gradeLevels = data.gradeLevels.length;
+      }
+
+      // 0.2 Sync Subjects (NEW)
+      if (data.subjects && data.subjects.length > 0) {
+        await Promise.all(data.subjects.map(s => {
+          return tx.subject.upsert({
+            where: { id: s.id },
+            update: {
+              title: s.title,
+              updatedAt: new Date(),
+              deletedAt: s.isDeleted ? new Date() : null,
+            },
+            create: {
+              id: s.id,
+              title: s.title,
+              createdBy: userEmail,
+              createdAt: s.createdAt || new Date(),
+              deletedAt: s.isDeleted ? new Date() : null,
+            },
+          });
+        }));
+        results.subjects = data.subjects.length;
+      }
+
       // 1. Sync Sections
       if (data.sections && data.sections.length > 0) {
         await Promise.all(data.sections.map(section => {
           return tx.section.upsert({
             where: { id: section.id },
             update: {
+              gradeLevelId: section.gradeLevelId ?? null,
               gradeLevel: section.gradeLevel,
               sectionName: section.sectionName,
               updatedAt: new Date(),
@@ -52,6 +99,7 @@ export class SyncService {
             },
             create: {
               id: section.id,
+              gradeLevelId: section.gradeLevelId ?? null,
               gradeLevel: section.gradeLevel,
               sectionName: section.sectionName,
               createdBy: userEmail,
@@ -96,6 +144,8 @@ export class SyncService {
             where: { id: exam.id },
             update: {
               periodId: exam.periodId ?? null,
+              gradeLevelId: exam.gradeLevelId ?? null,
+              subjectId: exam.subjectId ?? null,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
@@ -110,6 +160,8 @@ export class SyncService {
             create: {
               id: exam.id,
               periodId: exam.periodId ?? null,
+              gradeLevelId: exam.gradeLevelId ?? null,
+              subjectId: exam.subjectId ?? null,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
@@ -175,8 +227,10 @@ export class SyncService {
       ...(since ? { updatedAt: { gte: since } } : {}),
     };
 
-    const [periods, sections, students, exams, rawScanResults] = await Promise.all([
+    const [periods, gradeLevels, subjects, sections, students, exams, rawScanResults] = await Promise.all([
       prisma.period.findMany({ where: whereClause }),
+      prisma.gradeLevel.findMany({ where: whereClause }),
+      prisma.subject.findMany({ where: whereClause }),
       prisma.section.findMany({ where: whereClause }),
       prisma.student.findMany({ where: whereClause }),
       prisma.exam.findMany({ where: whereClause }),
@@ -191,6 +245,8 @@ export class SyncService {
 
     return {
       periods,
+      gradeLevels,
+      subjects,
       sections,
       students,
       exams,

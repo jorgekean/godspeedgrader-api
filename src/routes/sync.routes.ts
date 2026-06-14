@@ -5,6 +5,8 @@ import { SyncService } from '../services/sync.service.js';
 import {
   syncBatchSchema,
   periodSchema,
+  gradeLevelSchema,
+  subjectSchema,
   sectionSchema,
   studentSchema,
   examSchema,
@@ -28,6 +30,8 @@ export async function syncRoutes(fastify: FastifyInstance) {
           message: z.string(),
           results: z.object({
             periods: z.number().int(),
+            gradeLevels: z.number().int(),
+            subjects: z.number().int(),
             sections: z.number().int(),
             students: z.number().int(),
             exams: z.number().int(),
@@ -67,6 +71,14 @@ export async function syncRoutes(fastify: FastifyInstance) {
           success: z.boolean(),
           data: z.object({
             periods: z.array(periodSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
+            })),
+            gradeLevels: z.array(gradeLevelSchema.extend({
+              createdBy: z.string(),
+              updatedAt: z.date()
+            })),
+            subjects: z.array(subjectSchema.extend({
               createdBy: z.string(),
               updatedAt: z.date()
             })),
@@ -112,8 +124,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
         } as any);
       }
     }
-
+    console.log(`Fetching sync data for user: ${userEmail}, since: ${sinceDate?.toISOString() || 'N/A'}`);
     const data = await syncService.getSyncData(userEmail, sinceDate);
+    console.log(`Fetched sync data for user: ${userEmail}, periods: ${data.periods.length}, gradeLevels: ${data.gradeLevels.length}, subjects: ${data.subjects.length}, sections: ${data.sections.length}, students: ${data.students.length}, exams: ${data.exams.length}, scanResults: ${data.scanResults.length}`);
     return {
       success: true,
       data: data as any
