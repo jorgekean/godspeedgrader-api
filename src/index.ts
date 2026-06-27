@@ -58,6 +58,8 @@ fastify.register(cors, {
     origin: ['http://localhost:5173', 'https://localhost:5173',
         'http://172.20.10.12:5173', 'https://172.20.10.12:5173',
         'http://192.168.254.191:5173', 'https://192.168.254.191:5173',
+        'http://192.168.254.130:5173', 'https://192.168.254.130:5173',
+        'http://localhost:3000', 'https://localhost:3000',
         'http://localhost:3001', 'https://localhost:3001', "https://godspeedgrader.com", "https://www.godspeedgrader.com"],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
