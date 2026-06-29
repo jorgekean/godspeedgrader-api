@@ -41,7 +41,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
         500: z.object({
           success: z.boolean(),
           message: z.string(),
-          error: z.string()
+          stack: z.string().optional()
         })
       }
     }

@@ -7,8 +7,6 @@ const IdSchema = z.string().uuid();
 export const periodSchema = z.object({
   id: IdSchema,
   name: z.string().min(1),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
   createdAt: z.coerce.date().optional(),
   isDeleted: z.boolean().optional(),
 });

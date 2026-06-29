@@ -67,8 +67,6 @@ model Subject {
 model Period {
   id            String   @id // Client-generated UUID
   name          String   // e.g., "1st Quarter", "2nd Quarter"
-  startDate     DateTime @map("start_date")
-  endDate       DateTime @map("end_date")
   createdBy     String
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")

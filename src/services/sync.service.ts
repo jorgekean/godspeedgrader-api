@@ -15,6 +15,41 @@ export class SyncService {
         scanResults: 0,
       };
 
+      // Fetch all existing IDs for the user to validate foreign keys
+      const [existingPeriods, existingGradeLevels, existingSubjects, existingSections, existingStudents, existingExams] = await Promise.all([
+        tx.period.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+        tx.gradeLevel.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+        tx.subject.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+        tx.section.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+        tx.student.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+        tx.exam.findMany({ where: { createdBy: userEmail }, select: { id: true } }),
+      ]);
+
+      const validPeriodIds = new Set([
+        ...existingPeriods.map(p => p.id),
+        ...(data.periods || []).map(p => p.id)
+      ]);
+      const validGradeLevelIds = new Set([
+        ...existingGradeLevels.map(gl => gl.id),
+        ...(data.gradeLevels || []).map(gl => gl.id)
+      ]);
+      const validSubjectIds = new Set([
+        ...existingSubjects.map(s => s.id),
+        ...(data.subjects || []).map(s => s.id)
+      ]);
+      const validSectionIds = new Set([
+        ...existingSections.map(s => s.id),
+        ...(data.sections || []).map(s => s.id)
+      ]);
+      const validStudentIds = new Set([
+        ...existingStudents.map(s => s.id),
+        ...(data.students || []).map(s => s.id)
+      ]);
+      const validExamIds = new Set([
+        ...existingExams.map(e => e.id),
+        ...(data.exams || []).map(e => e.id)
+      ]);
+
       // 0. Sync Periods
       if (data.periods && data.periods.length > 0) {
         await Promise.all(data.periods.map(period => {
@@ -22,16 +57,12 @@ export class SyncService {
             where: { id: period.id },
             update: {
               name: period.name,
-              startDate: period.startDate,
-              endDate: period.endDate,
               updatedAt: new Date(),
               deletedAt: period.isDeleted ? new Date() : null,
             },
             create: {
               id: period.id,
               name: period.name,
-              startDate: period.startDate,
-              endDate: period.endDate,
               createdBy: userEmail,
               createdAt: period.createdAt || new Date(),
               deletedAt: period.isDeleted ? new Date() : null,
@@ -88,18 +119,19 @@ export class SyncService {
       // 1. Sync Sections
       if (data.sections && data.sections.length > 0) {
         await Promise.all(data.sections.map(section => {
+          const finalGradeLevelId = section.gradeLevelId && validGradeLevelIds.has(section.gradeLevelId) ? section.gradeLevelId : null;
           return tx.section.upsert({
             where: { id: section.id },
             update: {
-              gradeLevelId: section.gradeLevelId ?? null,
+              gradeLevelId: finalGradeLevelId,
               gradeLevel: section.gradeLevel,
               sectionName: section.sectionName,
               updatedAt: new Date(),
-              deletedAt: section.isDeleted ? new Date() : null, // Soft delete
+              deletedAt: section.isDeleted ? new Date() : null,
             },
             create: {
               id: section.id,
-              gradeLevelId: section.gradeLevelId ?? null,
+              gradeLevelId: finalGradeLevelId,
               gradeLevel: section.gradeLevel,
               sectionName: section.sectionName,
               createdBy: userEmail,
@@ -113,7 +145,8 @@ export class SyncService {
 
       // 2. Sync Students
       if (data.students && data.students.length > 0) {
-        await Promise.all(data.students.map(student => {
+        const validStudents = data.students.filter(student => validSectionIds.has(student.sectionId));
+        await Promise.all(validStudents.map(student => {
           return tx.student.upsert({
             where: { id: student.id },
             update: {
@@ -121,7 +154,7 @@ export class SyncService {
               fullName: student.fullName,
               studentNo: student.studentNo ?? null,
               updatedAt: new Date(),
-              deletedAt: student.isDeleted ? new Date() : null, // Soft delete
+              deletedAt: student.isDeleted ? new Date() : null,
             },
             create: {
               id: student.id,
@@ -134,18 +167,22 @@ export class SyncService {
             },
           });
         }));
-        results.students = data.students.length;
+        results.students = validStudents.length;
       }
 
       // 3. Sync Exams
       if (data.exams && data.exams.length > 0) {
         await Promise.all(data.exams.map(exam => {
+          const finalPeriodId = exam.periodId && validPeriodIds.has(exam.periodId) ? exam.periodId : null;
+          const finalGradeLevelId = exam.gradeLevelId && validGradeLevelIds.has(exam.gradeLevelId) ? exam.gradeLevelId : null;
+          const finalSubjectId = exam.subjectId && validSubjectIds.has(exam.subjectId) ? exam.subjectId : null;
+
           return tx.exam.upsert({
             where: { id: exam.id },
             update: {
-              periodId: exam.periodId ?? null,
-              gradeLevelId: exam.gradeLevelId ?? null,
-              subjectId: exam.subjectId ?? null,
+              periodId: finalPeriodId,
+              gradeLevelId: finalGradeLevelId,
+              subjectId: finalSubjectId,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
@@ -156,13 +193,13 @@ export class SyncService {
               answerKey: exam.answerKey,
               competencyMap: (exam.competencyMap as any) ?? null,
               updatedAt: new Date(),
-              deletedAt: exam.isDeleted ? new Date() : null, // Soft delete
+              deletedAt: exam.isDeleted ? new Date() : null,
             },
             create: {
               id: exam.id,
-              periodId: exam.periodId ?? null,
-              gradeLevelId: exam.gradeLevelId ?? null,
-              subjectId: exam.subjectId ?? null,
+              periodId: finalPeriodId,
+              gradeLevelId: finalGradeLevelId,
+              subjectId: finalSubjectId,
               gradeLevel: exam.gradeLevel,
               subject: exam.subject,
               title: exam.title,
@@ -183,7 +220,13 @@ export class SyncService {
 
       // 4. Sync Scan Results
       if (data.scanResults && data.scanResults.length > 0) {
-        await Promise.all(data.scanResults.map(result => {
+        const validScanResults = data.scanResults.filter(result => 
+          validExamIds.has(result.examId) && 
+          validStudentIds.has(result.studentId) && 
+          validSectionIds.has(result.sectionId)
+        );
+        await Promise.all(validScanResults.map(result => {
+          const finalPeriodId = result.periodId && validPeriodIds.has(result.periodId) ? result.periodId : null;
           const stringifiedAnswers = JSON.stringify(result.answers);
           return tx.scanResult.upsert({
             where: { id: result.id },
@@ -191,20 +234,20 @@ export class SyncService {
               examId: result.examId,
               studentId: result.studentId,
               sectionId: result.sectionId,
-              periodId: result.periodId ?? null,
+              periodId: finalPeriodId,
               score: result.score,
               total: result.total,
               answers: stringifiedAnswers,
               scannedAt: result.scannedAt,
               updatedAt: new Date(),
-              deletedAt: result.isDeleted ? new Date() : null, // Soft delete
+              deletedAt: result.isDeleted ? new Date() : null,
             },
             create: {
               id: result.id,
               examId: result.examId,
               studentId: result.studentId,
               sectionId: result.sectionId,
-              periodId: result.periodId ?? null,
+              periodId: finalPeriodId,
               score: result.score,
               total: result.total,
               answers: stringifiedAnswers,
@@ -215,7 +258,7 @@ export class SyncService {
             },
           });
         }));
-        results.scanResults = data.scanResults.length;
+        results.scanResults = validScanResults.length;
       }
 
       return results;
