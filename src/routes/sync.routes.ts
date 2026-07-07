@@ -107,6 +107,10 @@ export async function syncRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
+
     const userEmail = (request.user as any).email;
     const { since } = request.query as { since?: string };
 
